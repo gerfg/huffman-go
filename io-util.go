@@ -14,13 +14,13 @@ func ReadFile(fileName string) (data []byte, err error, size int) {
 	return data, err, len(data)
 }
 
-func getFrequencySlice(fileName string) (frequency []int, size int) {
+func getFrequencySlice(fileName string) (frequency []int, size int, data []byte) {
 	frequency = make([]int, 256)
 	for i := range frequency {
 		frequency[i] = 0
 	}
 
-	data, _, size := ReadFile(fileName)
+	data, _, size = ReadFile(fileName)
 	for idx, vl := range data {
 		fmt.Printf("Value: %s  -  %s  --  index: %d\n", vl, string(vl), idx)
 		frequency[vl]++
@@ -32,5 +32,5 @@ func getFrequencySlice(fileName string) (frequency []int, size int) {
 			fmt.Printf("Char: %s  ->  %d\n", string(idx), vl)
 		}
 	}
-	return frequency, size
+	return frequency, size, data
 }

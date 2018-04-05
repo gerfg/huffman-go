@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"sort"
-	"strconv"
 )
 
 type Node struct {
@@ -11,6 +10,10 @@ type Node struct {
 	Freq   int
 	Esq    *Node
 	Dir    *Node
+}
+
+type Code struct {
+	Code byte
 }
 
 func (n Node) initializeNode(l uint, f int, e *Node, d *Node) {
@@ -27,51 +30,81 @@ func initializeNodes(frequency []int) (arrayNodes []Node) {
 }
 
 func generateHuffmanTree(arrayNodes []Node) (tree Node) {
+	var n Node
 	for len(arrayNodes) > 1 {
-		// fmt.Println(len(arrayNodes))
-		// for idx, vl := range arrayNodes {
-		// 	fmt.Printf("ID: %d - Letter: %s - Freq: %d - Esq: %v - Dir: %v\n", idx, string(vl.Letter), vl.Freq, vl.Esq, vl.Dir)
-		// }
+		fmt.Println(len(arrayNodes))
+		for _, vl := range arrayNodes {
+			fmt.Printf("%v\n", vl)
+		}
 		// arrayNodes[0] + arrayNodes[1]
-		arrayNodes[1] = insertHuffmanTree(arrayNodes[0], arrayNodes[1])
+		n = createNode(&arrayNodes[0], &arrayNodes[1])
+		arrayNodes[1] = n
 		arrayNodes = append(arrayNodes[:0], arrayNodes[1:]...)
 		sort.Slice(arrayNodes, func(i, j int) bool {
-			return arrayNodes[i].Freq < arrayNodes[j].Freq
+			if arrayNodes[i].Freq == arrayNodes[j].Freq {
+				return arrayNodes[i].Letter < arrayNodes[j].Letter
+			} else {
+				return arrayNodes[i].Freq < arrayNodes[j].Freq
+			}
 		})
 	}
 	return arrayNodes[0]
 }
 
-func insertHuffmanTree(n1 Node, n2 Node) (n Node) {
-	n = Node{Letter: 257, Freq: n1.Freq + n2.Freq, Esq: &n1, Dir: &n2}
+func createNode(n1 *Node, n2 *Node) (n Node) {
+	n = Node{Letter: 0, Freq: n1.Freq + n2.Freq, Esq: &Node{Letter: n1.Letter, Freq: n1.Freq, Esq: n1.Esq, Dir: n1.Dir}, Dir: &Node{Letter: n2.Letter, Freq: n2.Freq, Esq: n2.Esq, Dir: n2.Dir}}
 	return n
 }
 
-func generateCodes(tree Node, cds map[uint]byte) {
+func createCompressString(data []byte, codes map[uint]string) (compressed string) {
+	for _, vl := range data {
+		compressed += codes[uint(vl)]
+		fmt.Printf("%v - %v -> %v - %v\n", vl, string(vl), codes[uint(vl)], compressed)
+	}
+	// fmt.Println(compressed)
+	return compressed
+}
 
-	var traverse func(n *Node, code uint64, bits byte, cds map[uint]byte)
+func generateCodes(tree Node, cds map[uint]string) {
 
-	traverse = func(n *Node, code uint64, bits byte, cds map[uint]byte) {
-		if n.Esq == nil || n.Dir == nil {
-			// Leaf
-			fmt.Printf("'%c': %0"+strconv.Itoa(int(bits))+"b  freq: %d\n", n.Letter, code, n.Freq)
+	var walkTree func(n *Node, code string, cds map[uint]string)
+
+	walkTree = func(n *Node, code string, cds map[uint]string) {
+		if n.Esq == nil {
+			fmt.Printf("'%s' - %d -> %s\n", string(n.Letter), n.Freq, code)
+			cds[n.Letter] = code
 			return
 		}
-		bits++
-		traverse(n.Esq, code<<1, bits, cds)
-		traverse(n.Dir, code<<1+1, bits, cds)
-	}
-
-	var walkTree func(n *Node, code *string, cds map[string]string)
-
-	walkTree = func(n *Node, code *string, cds map[string]string) {
-		if n.Esq == nil || n.Dir == nil {
-			fmt.Printf("'%c' - %s\n", n.Letter, code)
-		}
-		*code += *code + "0"
+		code += "0"
+		walkTree(n.Esq, code, cds)
+		code = code[:len(code)-1]
+		code += "1"
+		walkTree(n.Dir, code, cds)
+		code = code[:len(code)-1]
 	}
 	var code string
-	var cdss = make(map[string]string, 256)
-	walkTree(&tree, &code, cdss)
-	traverse(&tree, 0, 0, cds)
+	walkTree(&tree, code, cds)
+}
+
+func showPreOrder(tree *Node) {
+	fmt.Printf("root: %v \n", tree)
+
+	var preOrder func(tree *Node)
+	preOrder = func(tree *Node) {
+
+		if (*tree).Esq == nil {
+			fmt.Printf("%v \n", *tree)
+			return
+		}
+
+		if (*tree).Esq != nil {
+			preOrder(tree.Esq)
+		}
+		if (*tree).Dir != nil {
+			preOrder(tree.Dir)
+		}
+
+	}
+	preOrder(tree.Esq)
+	preOrder(tree.Dir)
 }
