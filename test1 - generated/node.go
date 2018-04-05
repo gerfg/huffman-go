@@ -77,10 +77,6 @@ func createEncodedFile(fileName string, compress string, frequency []int) {
 
 	var bytesToWrite []byte
 
-	for _, vl := range frequency {
-		bytesToWrite = append(bytesToWrite[:], byte(vl))
-	}
-
 	for _, vl := range compress {
 		if vl == '0' {
 			// fmt.Printf("%d Bit 0: %b\n", idx, vl)

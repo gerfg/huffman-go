@@ -6,14 +6,7 @@ import (
 )
 
 func main() {
-	fileName := "t1"
-	extension := ".bin"
-	encodeFile(fileName + extension)
-	decodeFile(fileName + "Encoded" + extension)
-}
-
-func encodeFile(fileName string) {
-	frequency, size, data := getFrequencySlice(fileName)
+	frequency, size, data := getFrequencySlice("generated.bin")
 
 	for _, vl := range data {
 		fmt.Println(vl)
@@ -61,31 +54,5 @@ func encodeFile(fileName string) {
 	compr := createEncodeString(data, cds)
 	fmt.Printf("\n%d - %s\n", len(compr), compr)
 
-	createEncodedFile("t1Encoded.bin", compr, frequency)
-}
-
-func decodeFile(fileName string) {
-	var frequency = make([]int, 256)
-	data, err, size := ReadFile(fileName)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(data)
-	fmt.Println(size)
-
-	fmt.Println("\n -- Frequency --\n")
-	for i := 0; i < 256; i++ {
-		frequency[i] = int(data[i])
-		if frequency[i] > 0 {
-			fmt.Printf("%d - %d\n", string(i), frequency[i])
-		}
-	}
-
-	fmt.Println("\n -- Data --\n")
-	var dataFile []byte
-	for i := 256; i < size; i++ {
-		dataFile = append(dataFile[:], data[i])
-	}
-	fmt.Printf("%0.8b\n", dataFile)
-
+	createEncodedFile("t1Enconded.bin", compr, frequency)
 }
