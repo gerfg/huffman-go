@@ -1,15 +1,18 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io/ioutil"
 	"math"
+	"os"
 	"sort"
 )
 
 type Node struct {
-	Letter uint
-	Freq   int
+	Letter uint16
+	Freq   uint16
 	Esq    *Node
 	Dir    *Node
 }
@@ -18,14 +21,14 @@ type Code struct {
 	Code byte
 }
 
-func (n Node) initializeNode(l uint, f int, e *Node, d *Node) {
+func (n Node) initializeNode(l uint16, f uint16, e *Node, d *Node) {
 	n = Node{l, f, e, d}
 }
 
-func initializeNodes(frequency []int) (arrayNodes []Node) {
+func initializeNodes(frequency []uint16) (arrayNodes []Node) {
 	for i := 0; i < 256; i++ {
 		if frequency[i] > 0 {
-			arrayNodes = append(arrayNodes, Node{Letter: uint(i), Freq: frequency[i], Esq: nil, Dir: nil})
+			arrayNodes = append(arrayNodes, Node{Letter: uint16(i), Freq: frequency[i], Esq: nil, Dir: nil})
 		}
 	}
 	return arrayNodes
@@ -34,11 +37,6 @@ func initializeNodes(frequency []int) (arrayNodes []Node) {
 func generateHuffmanTree(arrayNodes []Node) (tree Node) {
 	var n Node
 	for len(arrayNodes) > 1 {
-		fmt.Println(len(arrayNodes))
-		for _, vl := range arrayNodes {
-			fmt.Printf("%v\n", vl)
-		}
-		// arrayNodes[0] + arrayNodes[1]
 		n = createNode(&arrayNodes[0], &arrayNodes[1])
 		arrayNodes[1] = n
 		arrayNodes = append(arrayNodes[:0], arrayNodes[1:]...)
@@ -54,21 +52,28 @@ func generateHuffmanTree(arrayNodes []Node) (tree Node) {
 }
 
 func createNode(n1 *Node, n2 *Node) (n Node) {
-	n = Node{Letter: 0, Freq: n1.Freq + n2.Freq, Esq: &Node{Letter: n1.Letter, Freq: n1.Freq, Esq: n1.Esq, Dir: n1.Dir}, Dir: &Node{Letter: n2.Letter, Freq: n2.Freq, Esq: n2.Esq, Dir: n2.Dir}}
+	n = Node{Letter: 257, Freq: n1.Freq + n2.Freq, Esq: &Node{Letter: n1.Letter, Freq: n1.Freq, Esq: n1.Esq, Dir: n1.Dir}, Dir: &Node{Letter: n2.Letter, Freq: n2.Freq, Esq: n2.Esq, Dir: n2.Dir}}
 	return n
 }
 
-func createEncodeString(data []byte, codes map[uint]string) (compressed string) {
+func createEncodeString(data []byte, codes map[uint16]string) (compressed string) {
 	for _, vl := range data {
-		compressed += codes[uint(vl)]
+		compressed += codes[uint16(vl)]
 		// fmt.Printf("%v - %v -> %v - %v\n", vl, string(vl), codes[uint(vl)], compressed)
 	}
 	return compressed
 }
 
-func createEncodedFile(fileName string, compress string, frequency []int) {
+func createEncodedFile(fileName string, compress string, frequency []uint16) {
 	var bt2 uint8
 	var bitsBuffer = 0
+
+	out, err := os.Create(fileName)
+	if err != nil {
+		fmt.Printf("error creating file: %v", err)
+		return
+	}
+	defer out.Close()
 
 	numberOfBytes := math.Floor(float64(len(compress)) / 8)
 	bytesCreated := 0
@@ -77,55 +82,77 @@ func createEncodedFile(fileName string, compress string, frequency []int) {
 
 	var bytesToWrite []byte
 
+	buf := new(bytes.Buffer)
 	for _, vl := range frequency {
-		bytesToWrite = append(bytesToWrite[:], byte(vl))
+		err := binary.Write(buf, binary.LittleEndian, uint16(vl))
+		if err != nil {
+			fmt.Println("binary.Write failed:", err)
+		}
+		fmt.Printf("%d ,", vl)
 	}
+	fmt.Printf("\n\n\n% x\n", buf.Bytes())
+	bytesToWrite = buf.Bytes()
+	// ioutil.WriteFile("compressed.bin", buf.Bytes(), 0644)
+
+	// recover of frequency ===========
+
+	// var fre []uint16 = make([]uint16, 256)
+	// data, _ := ioutil.ReadFile("compressed.bin")
+	// fmt.Printf("len data: %d\n\n", len(data))
+	// bff := bytes.NewReader(data)
+	// binary.Read(bff, binary.LittleEndian, &fre)
+	//
+	// fmt.Println("\t -- Leitura --")
+	// for _, vl := range fre {
+	// 	// if vl > 0 {
+	// 	fmt.Printf("%d -", vl)
+	// 	// }
+	// }
+
+	// ===============================
 
 	for _, vl := range compress {
 		if vl == '0' {
-			// fmt.Printf("%d Bit 0: %b\n", idx, vl)
 			bt2 = bt2 << 1
 		}
 		if vl == '1' {
-			// fmt.Printf("%d Bit 1: %b\n", idx, vl)
 			bt2 = bt2<<1 + 1
 		}
 		bitsBuffer++
 		if bitsBuffer == 8 {
 			bytesCreated++
-			// fmt.Printf("\nBuffer 8bits: %s %0.8b\n\n", bt2, bt2)
-			bytesToWrite = append(bytesToWrite[:], bt2)
+			bytesToWrite = append(bytesToWrite, bt2)
 			bitsBuffer = 0
 			bt2 = 0
 		}
 	}
 	for i := 0; i < (8 - lastBits); i++ {
 		bt2 = bt2 << 1
-		// fmt.Printf("%d Bit 0:\n", i)
 	}
 	bytesCreated++
-	bytesToWrite = append(bytesToWrite[:], bt2)
-	// fmt.Printf("\nBuffer 8bits: %s %0.8b\n\n", bytesCreated, bt2, bt2)
+	bytesToWrite = append(bytesToWrite, bt2)
 
-	// fmt.Printf("\n\n-- Array of bytes --\n\n")
+	fmt.Printf("\n-- Array of bytes --\n")
 	// for idx, vl := range bytesToWrite {
-	// 	fmt.Printf("%d  -  %0.8b  -  %s\n", idx, vl, vl)
+	// 	if idx > 511 {
+	// 		fmt.Printf("%d  -  %0.8b  -  %s\n", idx, vl, vl)
+	// 	}
 	// }
 
-	err := ioutil.WriteFile(fileName, bytesToWrite, 0644)
+	err = ioutil.WriteFile(fileName, bytesToWrite, 0644)
 	if err != nil {
 		panic(err)
 	}
 
 }
 
-func generateCodes(tree Node, cds map[uint]string) {
+func generateCodes(tree Node, cds map[uint16]string) {
 
-	var walkTree func(n *Node, code string, cds map[uint]string)
+	var walkTree func(n *Node, code string, cds map[uint16]string)
 
-	walkTree = func(n *Node, code string, cds map[uint]string) {
+	walkTree = func(n *Node, code string, cds map[uint16]string) {
 		if n.Esq == nil {
-			fmt.Printf("'%s' - %d -> %s\n", string(n.Letter), n.Freq, code)
+			// fmt.Printf("'%s' - %d -> %s\n", string(n.Letter), n.Freq, code)
 			cds[n.Letter] = code
 			return
 		}
@@ -138,6 +165,26 @@ func generateCodes(tree Node, cds map[uint]string) {
 	}
 	var code string
 	walkTree(&tree, code, cds)
+}
+
+func huffmanTree(frequency []uint16) (root Node) {
+
+	fmt.Print("\n\tInitialize Tree\n")
+	arrayNodes := initializeNodes(frequency)
+
+	fmt.Print("\n\tSort arrayNodes\n")
+
+	sort.Slice(arrayNodes, func(i, j int) bool {
+		if arrayNodes[i].Freq == arrayNodes[j].Freq {
+			return arrayNodes[i].Letter < arrayNodes[j].Letter
+		} else {
+			return arrayNodes[i].Freq < arrayNodes[j].Freq
+		}
+	})
+
+	fmt.Print("\n\tHuffman Tree Creation\n")
+	root = generateHuffmanTree(arrayNodes)
+	return root
 }
 
 func showPreOrder(tree *Node) {
