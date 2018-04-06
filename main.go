@@ -1,6 +1,6 @@
 package main
 
 func main() {
-	encodeFile("generated.bin")
-	decodeFile("compressed.bin")
+	encodeFile("instances/t1.bin")
+	decodeFile("output/compressed.bin")
 }

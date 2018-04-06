@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"os"
 	"sort"
 )
@@ -59,7 +58,6 @@ func createNode(n1 *Node, n2 *Node) (n Node) {
 func createEncodeString(data []byte, codes map[uint16]string) (compressed string) {
 	for _, vl := range data {
 		compressed += codes[uint16(vl)]
-		// fmt.Printf("%v - %v -> %v - %v\n", vl, string(vl), codes[uint(vl)], compressed)
 	}
 	return compressed
 }
@@ -75,10 +73,8 @@ func createEncodedFile(fileName string, compress string, frequency []uint16) {
 	}
 	defer out.Close()
 
-	numberOfBytes := math.Floor(float64(len(compress)) / 8)
 	bytesCreated := 0
 	lastBits := len(compress) % 8
-	fmt.Printf("\n-- Byte's: %d  --  lastBits: %d\n\n", numberOfBytes, lastBits)
 
 	var bytesToWrite []byte
 
@@ -88,28 +84,8 @@ func createEncodedFile(fileName string, compress string, frequency []uint16) {
 		if err != nil {
 			fmt.Println("binary.Write failed:", err)
 		}
-		fmt.Printf("%d ,", vl)
 	}
-	fmt.Printf("\n\n\n% x\n", buf.Bytes())
 	bytesToWrite = buf.Bytes()
-	// ioutil.WriteFile("compressed.bin", buf.Bytes(), 0644)
-
-	// recover of frequency ===========
-
-	// var fre []uint16 = make([]uint16, 256)
-	// data, _ := ioutil.ReadFile("compressed.bin")
-	// fmt.Printf("len data: %d\n\n", len(data))
-	// bff := bytes.NewReader(data)
-	// binary.Read(bff, binary.LittleEndian, &fre)
-	//
-	// fmt.Println("\t -- Leitura --")
-	// for _, vl := range fre {
-	// 	// if vl > 0 {
-	// 	fmt.Printf("%d -", vl)
-	// 	// }
-	// }
-
-	// ===============================
 
 	for _, vl := range compress {
 		if vl == '0' {
@@ -132,13 +108,6 @@ func createEncodedFile(fileName string, compress string, frequency []uint16) {
 	bytesCreated++
 	bytesToWrite = append(bytesToWrite, bt2)
 
-	fmt.Printf("\n-- Array of bytes --\n")
-	// for idx, vl := range bytesToWrite {
-	// 	if idx > 511 {
-	// 		fmt.Printf("%d  -  %0.8b  -  %s\n", idx, vl, vl)
-	// 	}
-	// }
-
 	err = ioutil.WriteFile(fileName, bytesToWrite, 0644)
 	if err != nil {
 		panic(err)
@@ -152,7 +121,6 @@ func generateCodes(tree Node, cds map[uint16]string) {
 
 	walkTree = func(n *Node, code string, cds map[uint16]string) {
 		if n.Esq == nil {
-			// fmt.Printf("'%s' - %d -> %s\n", string(n.Letter), n.Freq, code)
 			cds[n.Letter] = code
 			return
 		}
@@ -169,10 +137,7 @@ func generateCodes(tree Node, cds map[uint16]string) {
 
 func huffmanTree(frequency []uint16) (root Node) {
 
-	fmt.Print("\n\tInitialize Tree\n")
 	arrayNodes := initializeNodes(frequency)
-
-	fmt.Print("\n\tSort arrayNodes\n")
 
 	sort.Slice(arrayNodes, func(i, j int) bool {
 		if arrayNodes[i].Freq == arrayNodes[j].Freq {
@@ -182,7 +147,6 @@ func huffmanTree(frequency []uint16) (root Node) {
 		}
 	})
 
-	fmt.Print("\n\tHuffman Tree Creation\n")
 	root = generateHuffmanTree(arrayNodes)
 	return root
 }
